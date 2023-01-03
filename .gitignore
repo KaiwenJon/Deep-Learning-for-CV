@@ -1,0 +1,6 @@
+Intro-Deep-Learning
+__MACOSX
+*.pyc
+*.npy
+*.gz
+*.pyx
