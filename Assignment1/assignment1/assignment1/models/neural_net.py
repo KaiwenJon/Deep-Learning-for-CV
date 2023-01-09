@@ -50,6 +50,7 @@ class NeuralNetwork:
             self.params["W" + str(i)] = np.random.randn(
                 sizes[i - 1], sizes[i]
             ) / np.sqrt(sizes[i - 1])
+            # self.params["W" + str(i)] = np.random.rand(sizes[i - 1], sizes[i])
             self.params["b" + str(i)] = np.zeros(sizes[i])
         # for key, value in self.params.items() :
         #     print(key)
@@ -107,6 +108,8 @@ class NeuralNetwork:
         y = exps/total
         # print("X\n", X)
         # print("y\n", y)
+        # print("maximum\n", maximum)
+        # print("softmax\n", y)
         return y
 
     def forward(self, X: np.ndarray) -> np.ndarray:
@@ -133,6 +136,8 @@ class NeuralNetwork:
             x = self.outputs["A" + str(i-1)]
             b = self.params["b" + str(i)]
             Z = self.linear(w, x, b) # (n_samples, output_D)
+            # print(i, np.max(Z))
+            # print(Z[0:5, 0:8])
             self.outputs["X" + str(i)] = Z
             if(i != self.num_layers):
                 # print("relu", i)
@@ -145,11 +150,23 @@ class NeuralNetwork:
         # Within self.outputs,
         # X1, X2, ... X(num_layers) represent neuron before activation
         # A1, A2, ... A(num_layers) represent neuron after activation
-        print("--------Output------------")
-        for key, value in self.outputs.items() :
-            print(key, "\n", value)
+        # print("--------Output------------")
+        # for key, value in self.outputs.items() :
+        #     print(key, "\n", value)
         return score
-
+    def cross_entropy(self, y_output, y_train):
+        y_output += 1e-40
+        log_likelihood = -np.log(y_output[range(self.n_samples), y_train])
+        # print("y_output\n", y_output)
+        # print("log of y_output\n",np.log(y_output))
+        # y_train_oneHot = np.zeros((self.n_samples, self.n_class))
+        # y_train_oneHot[np.arange(self.n_samples), y_train] = 1
+        # print("y_train\n",y_train_oneHot)
+        # print("y_output[range(self.n_samples), y_train]\n",y_output[range(self.n_samples), y_train])
+        # print("log_likelihood\n",log_likelihood)
+        # print("Myway:\n",np.multiply(np.log(y_output), y_train_oneHot))
+        loss = np.sum(log_likelihood)
+        return loss
     def backward(self, y: np.ndarray, reg: float = 0.0) -> float:
         """Perform back-propagation and compute the gradients and losses.
         Note: both gradients and loss should include regularization.
@@ -167,14 +184,12 @@ class NeuralNetwork:
         # self.relu_grad, and self.softmax_grad if it helps organize your code.
 
         # one hot y
-        self.n_class = np.max(y)+1
-        y_train_oneHot = np.zeros((self.n_samples, self.n_class))
+        y_train_oneHot = np.zeros((self.n_samples, self.output_size))
         y_train_oneHot[np.arange(self.n_samples), y] = 1
         # print(y_train_oneHot)
         self.gradients = {}
         # last layer (dL/dZ)
-        last_layer_name = "X" + str(self.num_layers)
-        self.gradients[last_layer_name] = self.outputs[last_layer_name] - y_train_oneHot #(n_samples, n_class)
+        self.gradients["X" + str(self.num_layers)] = self.outputs["A" + str(self.num_layers)] - y_train_oneHot #(n_samples, n_class)
         for i in range(self.num_layers, 0, -1):
             # print(i) # num_layers, ..., 2, 1 ex: i=3
             grad_w = self.outputs["A" + str(i-1)].T @ self.gradients["X" + str(i)] # ex: dL/dw3 = a2.T @ dL/dx3, where a2 is neuron after relu
@@ -184,17 +199,16 @@ class NeuralNetwork:
             self.gradients["W" + str(i)] = grad_w # dL/dw3
             self.gradients["X" + str(i-1)] = grad_x # dL/dx2
             self.gradients["b" + str(i)] = grad_b # dL/db3
-        print("==================gradient================")
+            # print("grad_w\n", grad_w[0:5, 0:4])
+            # print("grad_b\n", grad_b[0:5])
+        # print("==================gradient================")
         # for key, value in self.gradients.items() :
         #     print(key, "\n", value)
         # calculate cross entropy between self.outputs[A$(num_layers)] and y (not one hot)
         y_output = self.outputs["A" + str(self.num_layers)]
-        np.set_printoptions(precision=2)
-        # print(self.params["W1"])
-        # print(y_output)
-        log_likelihood = -np.log(y_output[range(self.n_samples), y])
-        # print(log_likelihood)
-        loss = np.sum(log_likelihood)
+        # np.set_printoptions(precision=2)
+        # print("y_output\n",y_output)
+        loss = self.cross_entropy(y_output=y_output, y_train=y)
         return loss
 
     def update(
@@ -220,8 +234,10 @@ class NeuralNetwork:
             # print(i) # num_layers, ..., 2, 1 ex: i=3
             para_name_w = "W" + str(i)
             para_name_b = "b" + str(i)
-            self.params[para_name_w] -= lr * self.gradients[para_name_w]
-            self.params[para_name_b] -= lr * self.gradients[para_name_b]
-        print("***********params***********")
+            self.params[para_name_w] -= lr * self.gradients[para_name_w] / self.n_samples
+            self.params[para_name_b] -= lr * self.gradients[para_name_b] / self.n_samples
+            # print(para_name_w, "\n", self.params[para_name_w][0:3, 0:3])
+            # print("grad", "\n", self.gradients[para_name_w][0:3, 0:3])
+        # print("***********params***********")
         # for key, value in self.params.items() :
-            # print(key, "\n", value)
+        #     print(key, "\n", value)

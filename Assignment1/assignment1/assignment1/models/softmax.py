@@ -19,7 +19,7 @@ class Softmax:
         self.reg_const = reg_const
         self.n_class = n_class
 
-        self.batch_size = 1000
+        self.batch_size = 200
 
     def stable_softmax(self, X: np.ndarray):
         maximum = np.max(X, axis=1).reshape(-1, 1)
@@ -36,6 +36,7 @@ class Softmax:
         """
         m = y.shape[0]
         p = self.stable_softmax(X)
+        p += 1e-40
         # We use multidimensional array indexing to extract 
         # softmax probability of the correct label for each sample.
         # Refer to https://docs.scipy.org/doc/numpy/user/basics.indexing.html#indexing-multi-dimensional-arrays for understanding multidimensional array indexing.
@@ -82,8 +83,10 @@ class Softmax:
                 N examples with D dimensions
             y_train: a numpy array of shape (N,) containing training labels
         """
+        # X_train = X_train[0:1000, :]
+        # y_train = y_train[0:1000]
         # TODO: implement me
-        X_train = np.concatenate((X_train, np.ones((X_train.shape[0], 1))), axis=1)
+        # X_train = np.concatenate((X_train, np.ones((X_train.shape[0], 1))), axis=1)
         n_samples, n_features = X_train.shape
         # turn y into one hot
         y_train_oneHot = np.zeros((n_samples, self.n_class))
@@ -103,7 +106,7 @@ class Softmax:
             if(epoch % 10 == 0):
                 pred_sf = self.predict(X_train[:, :-1])
                 acc = self.get_acc(pred_sf, y_train)
-                loss = self.cross_entropy(self.stable_softmax(np.dot(X_train, self.w)), y_train)
+                loss = self.cross_entropy(np.dot(X_train, self.w), y_train)
                 print(f"Epoch{epoch+1}\t, acc:{acc:.4f}, loss:{loss:.4f}")
     def get_acc(self, pred, y_test):
         return np.sum(y_test == pred) / len(y_test) * 100
