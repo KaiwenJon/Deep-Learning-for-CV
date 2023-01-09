@@ -42,6 +42,11 @@ class NeuralNetwork:
         self.output_size = output_size
         self.num_layers = num_layers
 
+
+        self.opt_momentum = {}
+        self.opt_sum_sq_grad = {}
+        self.opt_RMSprop = {}
+
         assert len(hidden_sizes) == (num_layers - 1)
         sizes = [input_size] + hidden_sizes + [output_size]
 
@@ -52,6 +57,13 @@ class NeuralNetwork:
             ) / np.sqrt(sizes[i - 1])
             # self.params["W" + str(i)] = np.random.rand(sizes[i - 1], sizes[i])
             self.params["b" + str(i)] = np.zeros(sizes[i])
+
+            self.opt_momentum["W" + str(i)] = np.zeros((sizes[i-1], sizes[i]))
+            self.opt_momentum["b" + str(i)] = np.zeros(sizes[i])
+            self.opt_sum_sq_grad["W" + str(i)] = np.zeros((sizes[i-1], sizes[i]))
+            self.opt_sum_sq_grad["b" + str(i)] = np.zeros(sizes[i])
+            self.opt_RMSprop["W" + str(i)] = np.zeros((sizes[i-1], sizes[i]))
+            self.opt_RMSprop["b" + str(i)] = np.zeros(sizes[i])
         # for key, value in self.params.items() :
         #     print(key)
     def linear(self, W: np.ndarray, X: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -196,9 +208,10 @@ class NeuralNetwork:
             grad_a = self.gradients["X" + str(i)] @ self.params["W" + str(i)].T # ex: dL/da2 = dl/dx3 @ w3.T, 
             grad_x = np.multiply(grad_a, self.outputs["X" + str(i-1)] > 0) # element-wise, dL/dx2 = dL/da2 * (whether x2 > 0), gradient of relu
             grad_b = np.sum(self.gradients["X" + str(i)], axis = 0) # dL/db3 = sum(dL/dx3, axis=0)
-            self.gradients["W" + str(i)] = grad_w # dL/dw3
-            self.gradients["X" + str(i-1)] = grad_x # dL/dx2
-            self.gradients["b" + str(i)] = grad_b # dL/db3
+            self.gradients["W" + str(i)] = grad_w / self.n_samples # dL/dw3
+            self.gradients["X" + str(i-1)] = grad_x / self.n_samples# dL/dx2
+            self.gradients["b" + str(i)] = grad_b / self.n_samples# dL/db3
+
             # print("grad_w\n", grad_w[0:5, 0:4])
             # print("grad_b\n", grad_b[0:5])
         # print("==================gradient================")
@@ -216,7 +229,7 @@ class NeuralNetwork:
         lr: float = 0.001,
         b1: float = 0.9,
         b2: float = 0.999,
-        eps: float = 1e-8,
+        eps: float = 1e-15,
         opt: str = "SGD",
     ):
         """Update the parameters of the model using the previously calculated
@@ -230,12 +243,41 @@ class NeuralNetwork:
         """
         # TODO: implement me. You'll want to add an if-statement that can
         # handle updates for both SGD and Adam depending on the value of opt.
+
+
         for i in range(self.num_layers, 0, -1):
             # print(i) # num_layers, ..., 2, 1 ex: i=3
             para_name_w = "W" + str(i)
             para_name_b = "b" + str(i)
-            self.params[para_name_w] -= lr * self.gradients[para_name_w] / self.n_samples
-            self.params[para_name_b] -= lr * self.gradients[para_name_b] / self.n_samples
+            if(opt == "SGD"):
+                self.params[para_name_w] -= lr * self.gradients[para_name_w]
+                self.params[para_name_b] -= lr * self.gradients[para_name_b]
+            elif(opt == "SGDM"):
+                self.opt_momentum[para_name_w] = -lr * self.gradients[para_name_w] + self.opt_momentum[para_name_w]* b1
+                self.opt_momentum[para_name_b] = -lr * self.gradients[para_name_b] + self.opt_momentum[para_name_b]* b1
+                self.params[para_name_w] += self.opt_momentum[para_name_w]
+                self.params[para_name_b] += self.opt_momentum[para_name_b]
+            elif(opt == "Adagrad"):
+                self.opt_sum_sq_grad[para_name_w] += np.square(self.gradients[para_name_w])
+                self.opt_sum_sq_grad[para_name_b] += np.square(self.gradients[para_name_b])
+                self.params[para_name_w] -= lr * self.gradients[para_name_w] / (np.sqrt(self.opt_sum_sq_grad[para_name_w])+eps)
+                self.params[para_name_b] -= lr * self.gradients[para_name_b] / (np.sqrt(self.opt_sum_sq_grad[para_name_b])+eps)
+                # print(para_name_w, "\n", self.params[para_name_w][0:3][0:3])
+            elif(opt == "RMSProp"):
+                self.opt_RMSprop[para_name_w]  = b2 * self.opt_RMSprop[para_name_w] + (1 - b2) * np.square(self.gradients[para_name_w])
+                self.opt_RMSprop[para_name_b]  = b2 * self.opt_RMSprop[para_name_b] + (1 - b2) * np.square(self.gradients[para_name_b])
+                self.params[para_name_w] -= lr * self.gradients[para_name_w] / (np.sqrt(self.opt_RMSprop[para_name_w])+eps)
+                self.params[para_name_b] -= lr * self.gradients[para_name_b] / (np.sqrt(self.opt_RMSprop[para_name_b])+eps)
+            elif(opt == "Adam"):
+                self.opt_momentum[para_name_w] = (1-b1) * self.gradients[para_name_w] + self.opt_momentum[para_name_w]* b1
+                self.opt_momentum[para_name_b] = (1-b1) * self.gradients[para_name_b] + self.opt_momentum[para_name_b]* b1
+                self.opt_RMSprop[para_name_w]  = b2 * self.opt_RMSprop[para_name_w] + (1 - b2) * np.square(self.gradients[para_name_w])
+                self.opt_RMSprop[para_name_b]  = b2 * self.opt_RMSprop[para_name_b] + (1 - b2) * np.square(self.gradients[para_name_b])
+                self.params[para_name_w] -= lr * self.opt_momentum[para_name_w] / (np.sqrt(self.opt_RMSprop[para_name_w])+eps)
+                self.params[para_name_b] -= lr * self.opt_momentum[para_name_b] / (np.sqrt(self.opt_RMSprop[para_name_b])+eps)
+            
+                
+                
         # print("***********params***********")
         # for key, value in self.params.items() :
         #     print(key, "\n", value)
