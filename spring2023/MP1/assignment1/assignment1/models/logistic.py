@@ -59,7 +59,8 @@ class Logistic:
                 # print(-(batch_y - self.sigmoid(np.dot(batch_X, self.w)))*batch_X)
                 # print(batch_y.shape, np.dot(batch_X, self.w).shape, self.sigmoid(np.dot(batch_X, self.w)).shape, ((self.sigmoid(np.dot(batch_X, self.w)))*batch_X).shape)
                 w_grad = np.sum(-(batch_y - self.sigmoid(np.dot(batch_X, self.w)))*batch_X, axis=0) / batch_X.shape[0]
-                self.w = self.w - self.lr * w_grad
+                self.w = self.w - self.lr * w_grad.reshape((-1, 1))
+                # print(self.w[0:5, :])
             if(epoch % 10 == 0):
                 pred_lr = self.predict(self.X_train)
                 acc = self.get_acc(pred_lr, self.y_train)

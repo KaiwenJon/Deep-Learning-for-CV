@@ -60,35 +60,38 @@ class SVM:
 
         ind_list = list(range(self.n_samples))
         np.random.shuffle(ind_list)
-        # X_train  = X_train[ind_list, :]
-        # y_train = y_train[ind_list,]
+        X_train  = X_train[ind_list, :]
+        y_train = y_train[ind_list,]
         self.X_train = X_train
         self.y_train = y_train
         for epoch in range(self.epochs):
             # for each batch
-                for index in range(0, self.n_samples, self.batch_size):
-                    batch_X = self.X_train[index:min(index+self.batch_size, self.n_samples),:]
-                    batch_y = self.y_train[index:min(index+self.batch_size, self.n_samples)]
-                    batch_y = np.reshape(batch_y, (-1, 1))
-                    
-                    w_grad = np.zeros(self.w.shape)
-                    for i, xi in enumerate(batch_X):
-                        wDotX = xi @ self.w # (1, n_class)
-                        # print(xi.shape)
-                        yi = batch_y[i]
-                        updateClasses = (wDotX - wDotX[yi]) > -1  # 1 0 0 1 1 0 0 1... (1, n_class)
-                        updateClasses[yi] = 0
-                        numOfUpdate = np.sum(updateClasses)
-                        updateGradient = xi.reshape((-1, 1)) * updateClasses
-                        updateGradient[:, yi] = -xi.reshape((-1, 1)) * numOfUpdate
-                        w_grad += updateGradient
-                    w_grad = w_grad / batch_X.shape[0]
-                    self.w = self.w - self.lr * w_grad
-                    self.w = (1-self.lr*self.reg_const/batch_X.shape[0]) * self.w
-                if(epoch % 10 == 0):
-                    pred = self.predict(self.X_train)
-                    acc = self.get_acc(pred, self.y_train)
-                    print(f"Epoch{epoch+1}, acc:{acc}")
+            for index in range(0, self.n_samples, self.batch_size):
+                batch_X = self.X_train[index:min(index+self.batch_size, self.n_samples),:]
+                batch_y = self.y_train[index:min(index+self.batch_size, self.n_samples)]
+                batch_y = np.reshape(batch_y, (-1, 1))
+
+                w_grad = np.zeros(self.w.shape)
+                for i, xi in enumerate(batch_X):
+                    wDotX = xi @ self.w # (1, n_class)
+                    # print(xi.shape)
+                    yi = batch_y[i]
+                    updateClasses = (wDotX - wDotX[yi]) > -1  # 1 0 0 1 1 0 0 1... (1, n_class)
+                    updateClasses[yi] = 0
+                    numOfUpdate = np.sum(updateClasses)
+                    updateGradient = xi.reshape((-1, 1)) * updateClasses
+                    updateGradient[:, yi] = -xi.reshape((-1, 1)) * numOfUpdate
+                    w_grad += updateGradient
+                w_grad = w_grad / batch_X.shape[0]
+                self.w = self.w - self.lr * w_grad
+                self.w = (1-self.lr*self.reg_const/batch_X.shape[0]) * self.w
+            decayRate = 0.5
+            if(self.lr > 1e-6):
+                self.lr *= 1/(1+epoch*decayRate)
+            if(epoch % 10 == 0):
+                pred = self.predict(self.X_train)
+                acc = self.get_acc(pred, self.y_train)
+                print(f"Epoch{epoch+1}, acc:{acc}")
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
         """Use the trained weights to predict labels for test data points.
