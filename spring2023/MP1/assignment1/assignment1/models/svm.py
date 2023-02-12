@@ -19,7 +19,7 @@ class SVM:
         self.reg_const = reg_const
         self.n_class = n_class
         
-        self.batch_size = 30
+        self.batch_size = 200
         self.n_samples = None
         self.n_features = None
 
@@ -57,7 +57,7 @@ class SVM:
         # TODO: implement me
         self.n_samples, self.n_features = X_train.shape
         self.w = np.random.rand(self.n_features, self.n_class)
-
+        # self.w = np.load("svm_fashion.npy")
         ind_list = list(range(self.n_samples))
         np.random.shuffle(ind_list)
         X_train  = X_train[ind_list, :]
@@ -85,8 +85,8 @@ class SVM:
                 w_grad = w_grad / batch_X.shape[0]
                 self.w = self.w - self.lr * w_grad
                 self.w = (1-self.lr*self.reg_const/batch_X.shape[0]) * self.w
-            decayRate = 0.5
-            if(self.lr > 1e-6):
+            decayRate = 0.99
+            if(self.lr > 1e-5):
                 self.lr *= 1/(1+epoch*decayRate)
             if(epoch % 10 == 0):
                 pred = self.predict(self.X_train)
