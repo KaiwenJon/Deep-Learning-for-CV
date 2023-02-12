@@ -19,7 +19,7 @@ class Softmax:
         self.reg_const = reg_const
         self.n_class = n_class
 
-        self.batch_size = 200
+        self.batch_size = 50
 
     def stable_softmax(self, X: np.ndarray):
         maximum = np.max(X, axis=1).reshape(-1, 1)
@@ -99,7 +99,7 @@ class Softmax:
         y_train_oneHot[np.arange(self.n_samples), y_train] = 1
         self.w = np.random.rand(self.n_features, self.n_class)
         # self.w = np.load("./softmax_weights.npy") + np.random.rand(self.n_features, self.n_class)
-
+        # self.w = np.load("./softmax_rice.npy")
         self.opt_sum_sq_grad = np.zeros(self.w.shape)
         self.opt_momentum = np.zeros(self.w.shape)
         self.opt_RMSprop = np.zeros(self.w.shape)
@@ -123,7 +123,7 @@ class Softmax:
                 # self.w = self.w - self.lr * m / (np.sqrt(v)+eps)
                 self.w = self.w - self.lr * w_grad
             decayRate = 0.99
-            if(self.lr > 1e-4):
+            if(self.lr > 1e-5):
                 self.lr *= 1/(1+epoch*decayRate)
             if(epoch % 10 == 0):
                 pred_sf = self.predict(X_train)
