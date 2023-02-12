@@ -4,3 +4,7 @@ __MACOSX
 *.npy
 *.gz
 *.pyx
+*.xml
+*.jpg
+*.png
+*.txt
