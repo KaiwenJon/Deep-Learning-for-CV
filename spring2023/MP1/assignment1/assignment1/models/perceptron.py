@@ -17,7 +17,7 @@ class Perceptron:
         self.epochs = epochs
         self.n_class = n_class
         
-        self.batch_size = 30
+        self.batch_size = 300
         self.n_samples = None
         self.n_features = None
     def get_acc(self, pred, y_test):
@@ -108,8 +108,8 @@ class Perceptron:
                     
                     # self.w = self.w - self.lr * w_grad / np.sqrt(self.opt_sum_sq_grad + eps)
                     
-                decayRate = 0.5
-                if(self.lr > 1e-6):
+                decayRate = 0.99
+                if(self.lr > 1e-5):
                     self.lr *= 1/(1+epoch*decayRate)
                 if(epoch % 10 == 0):
                     pred = self.predict(self.X_train)
