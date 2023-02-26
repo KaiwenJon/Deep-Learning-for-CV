@@ -230,10 +230,11 @@ class NeuralNetwork:
 
     def update(
         self,
+        iteration,
         lr: float = 0.001,
         b1: float = 0.9,
         b2: float = 0.999,
-        eps: float = 1e-15,
+        eps: float = 1e-15
     ):
         """Update the parameters of the model using the previously calculated
         gradients.
@@ -276,8 +277,12 @@ class NeuralNetwork:
                 self.opt_momentum[para_name_b] = (1-b1) * self.gradients[para_name_b] + self.opt_momentum[para_name_b]* b1
                 self.opt_RMSprop[para_name_w]  = b2 * self.opt_RMSprop[para_name_w] + (1 - b2) * np.square(self.gradients[para_name_w])
                 self.opt_RMSprop[para_name_b]  = b2 * self.opt_RMSprop[para_name_b] + (1 - b2) * np.square(self.gradients[para_name_b])
-                self.params[para_name_w] -= lr * self.opt_momentum[para_name_w] / (np.sqrt(self.opt_RMSprop[para_name_w])+eps)
-                self.params[para_name_b] -= lr * self.opt_momentum[para_name_b] / (np.sqrt(self.opt_RMSprop[para_name_b])+eps)
+                m_corrected_w = self.opt_momentum[para_name_w] / (1-b1**iteration)
+                m_corrected_b = self.opt_momentum[para_name_b] / (1-b1**iteration)
+                rmsprop_corrected_w = self.opt_RMSprop[para_name_w] / (1-b2**iteration)
+                rmsprop_corrected_b = self.opt_RMSprop[para_name_b] / (1-b2**iteration)
+                self.params[para_name_w] -= lr * m_corrected_w / (np.sqrt(rmsprop_corrected_w)+eps)
+                self.params[para_name_b] -= lr * m_corrected_b / (np.sqrt(rmsprop_corrected_b)+eps)
             
                 
                 
