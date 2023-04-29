@@ -97,19 +97,22 @@ class Agent():
         # Compute Q(s_t, a), the Q-value of the current state
         ### CODE ####
         q_values = self.policy_net(states)
-        q_values = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
+        q_values = q_values.gather(1, actions.unsqueeze(1)).cuda()
 
         # Compute Q function of next state
         ### CODE ####
-        next_q_values = self.policy_net(next_states).detach()
-        next_actions = torch.argmax(next_q_values, dim=1).unsqueeze(1)
-        next_q_values_target = self.target_net(next_states).detach().gather(1, next_actions).squeeze(1)
-
+        next_states = torch.from_numpy(next_states).cuda()
+        next_states_values = torch.zeros(batch_size, device=device)
+        non_final_next_states = torch.cat([s for s in next_states if s is not None]).cuda()
+        non_final_next_states = non_final_next_states.view(-1, 4, WIDTH, HEIGHT)
+        with torch.no_grad():
+          next_states_values[mask] = self.target_net(non_final_next_states).max(1)[0].cuda()[mask]
+        
         # Compute the target Q value
-        target_q_value = rewards + (self.discount_factor * next_q_values_target * mask.float())
-
+        expected_state_action_values = (next_states_values * self.discount_factor) + rewards
+    
         # Compute the loss between the predicted and target Q values
-        loss = F.smooth_l1_loss(q_values, target_q_value)
+        loss = F.smooth_l1_loss(q_values, expected_state_action_values.unsqueeze(1))
 
 
 
@@ -117,6 +120,7 @@ class Agent():
         ### CODE ####
         self.optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
         self.optimizer.step()
         self.scheduler.step()
 
