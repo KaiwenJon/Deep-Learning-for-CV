@@ -120,7 +120,5 @@ class Agent():
         self.optimizer.step()
         self.scheduler.step()
 
-        if frame % self.update_target == 0:
-            self.update_target_net()
      
         

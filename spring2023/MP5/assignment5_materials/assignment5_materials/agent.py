@@ -20,7 +20,7 @@ class Agent():
 
         # These are hyper parameters for the DQN
         self.discount_factor = 0.99
-        self.epsilon = 0.5#1.0
+        self.epsilon = 1.0
         self.epsilon_min = 0.01
         self.explore_step = 500000
         self.epsilon_decay = (self.epsilon - self.epsilon_min) / self.explore_step
@@ -51,7 +51,7 @@ class Agent():
             ### CODE ####
             # Choose the best action
             with torch.no_grad():
-                state = torch.FloatTensor(state).unsqueeze(0).to(device) / 255.0
+                state = torch.FloatTensor(state).unsqueeze(0).to(device)
                 q_values = self.policy_net(state)
                 a = q_values.argmax().item()
             pass
@@ -80,6 +80,7 @@ class Agent():
         ### CODE ####
         q_values = self.policy_net(states)
         q_values = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
+        print(q_values.shape)
 
         # Compute Q function of next state
         ### CODE ####
