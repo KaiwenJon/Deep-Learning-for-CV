@@ -66,7 +66,7 @@ class Agent():
             ### CODE ####
             # Choose the best action
             with torch.no_grad():
-                state = torch.FloatTensor(state).unsqueeze(0).to(device) / 255.0
+                state = torch.FloatTensor(state).unsqueeze(0).to(device)
                 q_values = self.policy_net(state)
                 a = q_values.argmax().item()
             pass
@@ -93,23 +93,38 @@ class Agent():
         
         # Your agent.py code here with double DQN modifications
         ### CODE ###
+        # print("history.shape", history.shape)
+        # print("states.shape", states.shape)
+        # print("actions.shape", actions.shape)
+        # print("reward.shape", rewards.shape)
+        # print("next states shape", next_states.shape)
+        # print("Mask shape", mask.shape)
+
 
         # Compute Q(s_t, a), the Q-value of the current state
         ### CODE ####
         q_values = self.policy_net(states)
         q_values = q_values.gather(1, actions.unsqueeze(1)).cuda()
+        # print("Q values shape", q_values.shape)
 
         # Compute Q function of next state
         ### CODE ####
         next_states = torch.from_numpy(next_states).cuda()
-        next_states_values = torch.zeros(batch_size, device=device)
+        next_q_values = torch.zeros((batch_size, 1), device=device)
         non_final_next_states = torch.cat([s for s in next_states if s is not None]).cuda()
         non_final_next_states = non_final_next_states.view(-1, 4, WIDTH, HEIGHT)
+        # print("non_final_next_states.shape", non_final_next_states.shape)
         with torch.no_grad():
-          next_states_values[mask] = self.target_net(non_final_next_states).max(1)[0].cuda()[mask]
+          mask = mask.unsqueeze(1)
+          next_action = self.policy_net(non_final_next_states).max(1)[1]
+        #   print("next_action.shape", next_action.shape)
+          next_q_values[mask] = self.target_net(non_final_next_states).gather(1, next_action.unsqueeze(1)).cuda()[mask]
+        #   print("updated mext states values shape", next_q_values.shape)
         
         # Compute the target Q value
-        expected_state_action_values = (next_states_values * self.discount_factor) + rewards
+        next_q_values = next_q_values.squeeze()
+        expected_state_action_values = (next_q_values * self.discount_factor) + rewards
+        # print("expected_state_action_values.shape", expected_state_action_values.shape)
     
         # Compute the loss between the predicted and target Q values
         loss = F.smooth_l1_loss(q_values, expected_state_action_values.unsqueeze(1))
